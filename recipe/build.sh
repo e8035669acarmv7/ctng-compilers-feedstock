@@ -15,6 +15,8 @@ get_cpu_arch() {
     CPU_ARCH="aarch64"
   elif [[ "$1" == "linux-s390x" ]]; then
     CPU_ARCH="s390x"
+  elif [[ "$1" == "linux-armv7l" ]]; then
+    CPU_ARCH="armv7l"
   else
     echo "Unknown architecture"
     exit 1
@@ -35,9 +37,9 @@ if [[ "$channel_targets" == *conda-forge* ]]; then
   GCC_CONFIGURE_OPTIONS+=(--with-bugurl="https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose")
 fi
 
-export BUILD="$(get_cpu_arch $build_platform)-${gcc_vendor}-linux-gnu"
-export HOST="$(get_cpu_arch $target_platform)-${gcc_vendor}-linux-gnu"
-export TARGET="$(get_cpu_arch $cross_target_platform)-${gcc_vendor}-linux-gnu"
+export BUILD="$(get_cpu_arch $build_platform)-${gcc_vendor}-linux-gnueabihf"
+export HOST="$(get_cpu_arch $target_platform)-${gcc_vendor}-linux-gnueabihf"
+export TARGET="$(get_cpu_arch $cross_target_platform)-${gcc_vendor}-linux-gnueabihf"
 
 for tool in addr2line ar as c++filt gcc g++ ld nm objcopy objdump ranlib readelf size strings strip; do
   if [[ ! -f $BUILD_PREFIX/bin/$BUILD-$tool ]]; then
@@ -108,6 +110,11 @@ cd build
   --build=$BUILD \
   --host=$HOST \
   --target=$TARGET \
+  --with-abi=aapcs-linux \
+  --with-cpu=cortex-a53 \
+  --with-fpu=neon-vfpv4 \
+  --with-float=hard \
+  --with-mode=arm \
   --enable-default-pie \
   --enable-languages=c,c++,fortran,objc,obj-c++ \
   --enable-__cxa_atexit \
