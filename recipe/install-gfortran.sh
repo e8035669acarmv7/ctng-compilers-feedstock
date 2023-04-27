@@ -1,6 +1,6 @@
 set -e -x
 
-export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnu"
+export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnueabihf"
 _libdir=libexec/gcc/${CHOST}/${PKG_VERSION}
 
 # libtool wants to use ranlib that is here, macOS install doesn't grok -t etc
