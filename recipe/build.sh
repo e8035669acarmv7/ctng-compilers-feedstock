@@ -24,6 +24,12 @@ get_cpu_arch() {
   echo $CPU_ARCH
 }
 
+get_postfix() {
+  if [[ "$1" == "linux-armv7l" ]]; then
+    echo "eabihf"
+  fi
+}
+
 if [[ "$channel_targets" == *conda-forge* && "${build_platform}" == "${target_platform}" ]]; then
   # Use new compilers instead of relying on ones from the docker image
   conda create -p $SRC_DIR/cf-compilers gcc gfortran gxx binutils -c conda-forge --yes --quiet
@@ -37,9 +43,9 @@ if [[ "$channel_targets" == *conda-forge* ]]; then
   GCC_CONFIGURE_OPTIONS+=(--with-bugurl="https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose")
 fi
 
-export BUILD="$(get_cpu_arch $build_platform)-${gcc_vendor}-linux-gnueabihf"
-export HOST="$(get_cpu_arch $target_platform)-${gcc_vendor}-linux-gnueabihf"
-export TARGET="$(get_cpu_arch $cross_target_platform)-${gcc_vendor}-linux-gnueabihf"
+export BUILD="$(get_cpu_arch $build_platform)-${gcc_vendor}-linux-gnu$(get_postfix $build_platform)"
+export HOST="$(get_cpu_arch $target_platform)-${gcc_vendor}-linux-gnu$(get_postfix $target_platform)"
+export TARGET="$(get_cpu_arch $cross_target_platform)-${gcc_vendor}-linux-gnu$(get_postfix $cross_target_platform)"
 
 for tool in addr2line ar as c++filt gcc g++ ld nm objcopy objdump ranlib readelf size strings strip; do
   if [[ ! -f $BUILD_PREFIX/bin/$BUILD-$tool ]]; then
