@@ -121,6 +121,7 @@ cd build
   --with-fpu=neon-vfpv4 \
   --with-float=hard \
   --with-mode=arm \
+  --with-arch=armv7 \
   --enable-default-pie \
   --enable-languages=c,c++,fortran,objc,obj-c++ \
   --enable-__cxa_atexit \
