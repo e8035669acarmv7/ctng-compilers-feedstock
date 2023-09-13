@@ -1,0 +1,17 @@
+
+binutils_version:
+- '2.40'
+gcc_machine:
+- armv7l
+cross_target_platform:
+- linux-armv7l
+
+gcc_version:
+- 12.3.0
+- 13.2.0
+gcc_maj_ver:
+- '12'
+- '13'
+libgfortran_soname:
+- '5'
+- '5'
