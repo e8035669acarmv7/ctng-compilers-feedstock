@@ -3,15 +3,15 @@ gcc_machine:
 gcc_vendor:
   - conda
 gcc_version:
-  - 11.4.0
+#  - 11.4.0
   - 12.3.0
   - 13.2.0
 gcc_maj_ver:
-  - 11
+#  - 11
   - 12
   - 13
 libgfortran_soname:
-  - 5
+#  - 5
   - 5
   - 5
 binutils_version:
@@ -39,3 +39,11 @@ zip_keys:
   - - gcc_version
     - gcc_maj_ver
     - libgfortran_soname
+
+channel_sources:
+- e8035669acarmv7,conda-forge
+channel_targets:
+- e8035669acarmv7 main
+docker_image:
+- e8035669/linux-anvil-armv7l # [os.environ.get("BUILD_PLATFORM") == "linux-armv7l"]
+
