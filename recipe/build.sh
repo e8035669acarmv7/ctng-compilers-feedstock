@@ -2,39 +2,10 @@
 
 set -ex
 
+source ${RECIPE_DIR}/setup_compiler.sh
+
 # ensure patch is applied
 grep 'conda-forge:: allow' gcc/gcc.c*
-
-get_cpu_arch() {
-  local CPU_ARCH
-  if [[ "$1" == "linux-64" ]]; then
-    CPU_ARCH="x86_64"
-  elif [[ "$1" == "linux-ppc64le" ]]; then
-    CPU_ARCH="powerpc64le"
-  elif [[ "$1" == "linux-aarch64" ]]; then
-    CPU_ARCH="aarch64"
-  elif [[ "$1" == "linux-s390x" ]]; then
-    CPU_ARCH="s390x"
-  elif [[ "$1" == "linux-armv7l" ]]; then
-    CPU_ARCH="armv7l"
-  else
-    echo "Unknown architecture"
-    exit 1
-  fi
-  echo $CPU_ARCH
-}
-
-get_postfix() {
-  if [[ "$1" == "linux-armv7l" ]]; then
-    echo "eabihf"
-  fi
-}
-
-if [[ "$channel_targets" == *conda-forge* && "${build_platform}" == "${target_platform}" ]]; then
-  # Use new compilers instead of relying on ones from the docker image
-  conda create -p $SRC_DIR/cf-compilers gcc gfortran gxx binutils -c conda-forge --yes --quiet
-  export PATH=$SRC_DIR/cf-compilers/bin:$PATH
-fi
 
 GCC_CONFIGURE_OPTIONS=()
 
@@ -43,40 +14,35 @@ if [[ "$channel_targets" == *conda-forge* ]]; then
   GCC_CONFIGURE_OPTIONS+=(--with-bugurl="https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose")
 fi
 
-export BUILD="$(get_cpu_arch $build_platform)-${gcc_vendor}-linux-gnu$(get_postfix $build_platform)"
-export HOST="$(get_cpu_arch $target_platform)-${gcc_vendor}-linux-gnu$(get_postfix $target_platform)"
-export TARGET="$(get_cpu_arch $cross_target_platform)-${gcc_vendor}-linux-gnu$(get_postfix $cross_target_platform)"
-
-for tool in addr2line ar as c++filt gcc g++ ld nm objcopy objdump ranlib readelf size strings strip; do
-  if [[ ! -f $BUILD_PREFIX/bin/$BUILD-$tool ]]; then
-    ln -s $(which $tool) $BUILD_PREFIX/bin/$BUILD-$tool
-  fi
-  tool_upper=$(echo $tool | tr a-z A-Z | sed "s/+/X/g")
-  if [[ "$tool" == gcc ]]; then
-     tool_upper=CC
-  elif [[ "$tool" == g++ ]]; then
-     tool_upper=CXX
+for tool in addr2line ar as c++filt cc c++ fc gcc g++ gfortran ld nm objcopy objdump ranlib readelf size strings strip; do
+  tool_upper=$(echo $tool | tr a-z-+ A-Z_X)
+  if [[ "$tool" == "cc" ]]; then
+     tool=gcc
+  elif [[ "$tool" == "fc" ]]; then
+     tool=gfortran
+  elif [[ "$tool" == "c++" ]]; then
+     tool=g++
+  elif [[ "$target_platform" != "$build_platform" && "$tool" =~ ^(ar|nm|ranlib)$ ]]; then
+     tool="gcc-${tool}"
   fi
   eval "export ${tool_upper}_FOR_BUILD=\$BUILD_PREFIX/bin/\$BUILD-\$tool"
-  eval "export ${tool_upper}_FOR_TARGET=\$BUILD_PREFIX/bin/\$TARGET-\$tool"
   eval "export ${tool_upper}=\$BUILD_PREFIX/bin/\$HOST-\$tool"
+  eval "export ${tool_upper}_FOR_TARGET=\$BUILD_PREFIX/bin/\$TARGET-\$tool"
 done
 
-if [[ $build_platform != $target_platform ]]; then
-  export GFORTRAN_FOR_TARGET="$BUILD_PREFIX/bin/$TARGET-gfortran"
-  export GXX_FOR_TARGET="$BUILD_PREFIX/bin/$TARGET-g++"
-  export FC=$GFORTRAN_FOR_TARGET
+if [[ "$cross_target_platform" == "win-64" ]]; then
+  # do not expect ${prefix}/mingw symlink - this should be superceded by
+  # 0005-Windows-Don-t-ignore-native-system-header-dir.patch .. but isn't!
+  sed -i 's#${prefix}/mingw/#${prefix}/${target}/sysroot/usr/#g' configure
+  sed -i "s#/mingw/#/usr/#g" gcc/config/i386/mingw32.h
 fi
+
+NATIVE_SYSTEM_HEADER_DIR=/usr/include
+SYSROOT_DIR=${PREFIX}/${TARGET}/sysroot
 
 # workaround a bug in gcc build files when using external binutils
 # and build != host == target
 export gcc_cv_objdump=$OBJDUMP_FOR_TARGET
-
-# Workaround a problem in our gcc_bootstrap package
-if [[ -d $BUILD_PREFIX/$BUILD/sysroot/usr/lib64 && ! -d $BUILD_PREFIX/$BUILD/sysroot/usr/lib ]]; then
-  mkdir -p $BUILD_PREFIX/$BUILD/sysroot/usr
-  ln -sf $BUILD_PREFIX/$BUILD/sysroot/usr/lib64 $BUILD_PREFIX/$BUILD/sysroot/usr/lib
-fi
 
 ls $BUILD_PREFIX/bin/
 
@@ -108,6 +74,12 @@ cd build
 # goes back to the original way.
 # See https://github.com/gcc-mirror/gcc/blob/16e2427f50c208dfe07d07f18009969502c25dc8/gcc/configure.ac#L218
 
+if [[ "$TARGET" == *linux* ]]; then
+  GCC_CONFIGURE_OPTIONS+=(--enable-libsanitizer)
+  GCC_CONFIGURE_OPTIONS+=(--enable-default-pie)
+  GCC_CONFIGURE_OPTIONS+=(--enable-threads=posix)
+fi
+
 ../configure \
   --prefix="$PREFIX" \
   --with-slibdir="$PREFIX/lib" \
@@ -129,9 +101,7 @@ cd build
   --disable-libssp \
   --enable-libquadmath \
   --enable-libquadmath-support \
-  --enable-libsanitizer \
   --enable-lto \
-  --enable-threads=posix \
   --enable-target-optspace \
   --enable-plugin \
   --enable-gold \
@@ -139,9 +109,10 @@ cd build
   --disable-bootstrap \
   --disable-multilib \
   --enable-long-long \
-  --with-sysroot=${PREFIX}/${TARGET}/sysroot \
+  --with-sysroot=${SYSROOT_DIR} \
   --with-build-sysroot=${BUILD_PREFIX}/${TARGET}/sysroot \
-  --with-gxx-include-dir="${PREFIX}/${TARGET}/include/c++/${gcc_version}" \
+  --with-native-system-header-dir=${NATIVE_SYSTEM_HEADER_DIR} \
+  --with-gxx-include-dir="${PREFIX}/lib/gcc/${TARGET}/${gcc_version}/include/c++" \
   "${GCC_CONFIGURE_OPTIONS[@]}"
 
-make -j${CPU_COUNT} || (cat ${TARGET}/libbacktrace/config.log; false)
+make -j${CPU_COUNT} || (cat ${TARGET}/libgomp/config.log; false)

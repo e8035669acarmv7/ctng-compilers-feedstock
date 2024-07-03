@@ -1,5 +1,9 @@
+#!/bin/bash
+
+source ${RECIPE_DIR}/setup_compiler.sh
+
 set -ex
-export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnueabihf"
+export CHOST="${triplet}"
 specdir=$PREFIX/lib/gcc/$CHOST/${gcc_version}
 if [[ "$cross_target_platform" == "$target_platform" ]]; then
     install -Dm644 -T ${SRC_DIR}/build/gcc/specs $specdir/conda.specs
@@ -15,7 +19,7 @@ if [[ "$cross_target_platform" == "$target_platform" ]]; then
     # We use double quotes here because we want $PREFIX and $CHOST to be expanded at build time
     #   and recorded in the specs file.  It will undergo a prefix replacement when our compiler
     #   package is installed.
-    sed -i -e "/\*link_command:/,+1 s+%.*+& %{\!static:-rpath ${PREFIX}/lib -rpath-link ${PREFIX}/lib} -L ${PREFIX}/lib+" $specdir/conda.specs
+    sed -i -e "/\*link_command:/,+1 s+%.*+& %{\!static:-rpath ${PREFIX}/lib -rpath-link ${PREFIX}/lib} -L ${PREFIX}/lib/stubs -L ${PREFIX}/lib+" $specdir/conda.specs
     # put -disable-new-dtags at the front of the cmdline so that user provided -enable-new-dtags (in %l) can  override it
     sed -i -e "/\*link_command:/,+1 s+%(linker)+& -disable-new-dtags +" $specdir/conda.specs
     # use -idirafter to put the conda "system" includes where /usr/local/include would typically go
@@ -25,7 +29,7 @@ if [[ "$cross_target_platform" == "$target_platform" ]]; then
     sed -i -e "/\*cc1_options:/,+1 s+%.*+& -idirafter ${PREFIX}/include+" $specdir/conda.specs
 
 else
-    # does it even make sense to do anything here?  Could do something with %:getenv(BUILD_PREFIX  /include) 
+    # does it even make sense to do anything here?  Could do something with %:getenv(BUILD_PREFIX  /include)
     # but in the case that we aren't inside conda-build, it will cause gcc to fatal
     # because it won't be set.  Just explicitly making this fail for now so that the meta.yaml
     # is consitent with when it creates the conda-gcc-specs package

@@ -1,27 +1,47 @@
-gcc_machine:
-  - armv7l
-gcc_vendor:
-  - conda
+triplet:
+  - x86_64-conda-linux-gnu
+  - powerpc64le-conda-linux-gnu
+  - aarch64-conda-linux-gnu
+  - s390x-conda-linux-gnu
+  - x86_64-w64-mingw32
+old_triplet:
+  - x86_64-conda_cos6-linux-gnu
+  - powerpc64le-conda_cos7-linux-gnu
+  - aarch64-conda_cos7-linux-gnu
+  - s390x-conda-linux-gnu
+  - x86_64-w64-mingw32
 gcc_version:
-#  - 11.4.0
-  - 12.3.0
-  - 13.2.0
+  - 12.4.0
+  - 13.3.0
+  - 14.1.0
 gcc_maj_ver:
-#  - 11
   - 12
   - 13
+  - 14
 libgfortran_soname:
-#  - 5
+  - 5
   - 5
   - 5
 binutils_version:
   - 2.40
 cross_target_platform:
-  - linux-armv7l
-old_gcc_vendor:
-  - conda_cos7
-glibc_version:
+  - linux-64
+  - linux-ppc64le
+  - linux-aarch64
+  - linux-s390x
+  - win-64
+cross_target_stdlib_version:
+  - 2.12
   - 2.17
+  - 2.17
+  - 2.17
+  - 12
+cross_target_stdlib:
+  - sysroot
+  - sysroot
+  - sysroot
+  - sysroot
+  - m2w64-sysroot
 # openmp versions
 openmp_ver:
   - 4.5
@@ -29,21 +49,18 @@ libgomp_ver:
   - 1.0.0
 _libgcc_mutex:
   - 0.1 conda_forge
-use_system_gcc:
-  - False
+channel_sources:
+  - conda-forge/label/sysroot-with-crypt,conda-forge
+c_stdlib:          # [win]
+  - m2w64-sysroot  # [win]
+c_stdlib_version:  # [win]
+  - 12             # [win]
 zip_keys:
-  - - glibc_version
-    - old_gcc_vendor
-    - gcc_machine
+  - - cross_target_stdlib_version
+    - cross_target_stdlib
+    - triplet
+    - old_triplet
     - cross_target_platform
   - - gcc_version
     - gcc_maj_ver
     - libgfortran_soname
-
-channel_sources:
-- e8035669acarmv7,conda-forge
-channel_targets:
-- e8035669acarmv7 main
-docker_image:
-- e8035669/linux-anvil-armv7l # [os.environ.get("BUILD_PLATFORM") == "linux-armv7l"]
-

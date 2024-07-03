@@ -1,6 +1,9 @@
+#!/bin/bash
+
+source ${RECIPE_DIR}/setup_compiler.sh
 set -e -x
 
-export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnueabihf"
+export CHOST="${triplet}"
 
 mkdir -p ${PREFIX}/lib
 

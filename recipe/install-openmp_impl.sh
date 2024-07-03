@@ -1,9 +1,13 @@
-set -e -x
+#!/bin/bash
 
-export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnueabihf"
+source ${RECIPE_DIR}/setup_compiler.sh
+set -e -x
 
 mkdir -p ${PREFIX}/lib
 
 pushd ${PREFIX}/lib/
-ln -s libgomp.so.${libgomp_ver} libgomp.so.${libgomp_ver:0:1}
+
+if [[ "${TARGET}" != *mingw* ]]; then
+  ln -s libgomp.so.${libgomp_ver} libgomp.so.${libgomp_ver:0:1}
+fi
 popd

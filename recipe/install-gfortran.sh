@@ -1,6 +1,9 @@
+#!/bin/bash
+
+source ${RECIPE_DIR}/setup_compiler.sh
 set -e -x
 
-export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnueabihf"
+export CHOST="${triplet}"
 _libdir=libexec/gcc/${CHOST}/${PKG_VERSION}
 
 # libtool wants to use ranlib that is here, macOS install doesn't grok -t etc
@@ -18,8 +21,8 @@ make -C gcc prefix=${PREFIX} fortran.install-{common,man,info}
 # How it used to be:
 # install -Dm755 gcc/f951 ${PREFIX}/${_libdir}/f951
 for file in f951; do
-  if [[ -f gcc/${file} ]]; then
-    install -c gcc/${file} ${PREFIX}/${_libdir}/${file}
+  if [[ -f gcc/${file}${EXEEXT} ]]; then
+    install -c gcc/${file}${EXEEXT} ${PREFIX}/${_libdir}/${file}${EXEEXT}
   fi
 done
 
@@ -27,28 +30,36 @@ mkdir -p ${PREFIX}/${CHOST}/lib
 cp ${CHOST}/libgfortran/libgfortran.spec ${PREFIX}/${CHOST}/lib
 
 pushd ${PREFIX}/bin
-  ln -sf ${CHOST}-gfortran ${CHOST}-f95
+  if [[ "${target_platform}" != "win-64" ]]; then
+    ln -sf ${CHOST}-gfortran${EXEEXT} ${CHOST}-f95${EXEEXT}
+  else
+    cp ${CHOST}-gfortran${EXEEXT} ${CHOST}-f95${EXEEXT}
+  fi
 popd
 
 make install DESTDIR=$SRC_DIR/build-finclude
 mkdir -p $PREFIX/lib/gcc/${CHOST}/${gcc_version}/finclude
+mkdir -p $PREFIX/lib/gcc/${CHOST}/${gcc_version}/include
 install -Dm644 $SRC_DIR/build-finclude/$PREFIX/lib/gcc/${CHOST}/${gcc_version}/finclude/* $PREFIX/lib/gcc/${CHOST}/${gcc_version}/finclude/
+install -Dm644 $SRC_DIR/build-finclude/$PREFIX/lib/gcc/${CHOST}/${gcc_version}/include/*.h $PREFIX/lib/gcc/${CHOST}/${gcc_version}/include/
 
 # Install Runtime Library Exception
 install -Dm644 $SRC_DIR/COPYING.RUNTIME \
         ${PREFIX}/share/licenses/gcc-fortran/RUNTIME.LIBRARY.EXCEPTION
 
 if [[ "${target_platform}" != "${cross_target_platform}" ]]; then
-  cp -f --no-dereference ${SRC_DIR}/build/${CHOST}/libgfortran/.libs/libgfortran*.so* ${PREFIX}/${CHOST}/lib/
+  if [[ ${triplet} == *linux* ]]; then
+    cp -f --no-dereference ${SRC_DIR}/build/${CHOST}/libgfortran/.libs/libgfortran*.so* ${PREFIX}/${CHOST}/lib/
+  fi
 fi
-cp -f --no-dereference ${SRC_DIR}/build/${CHOST}/libgfortran/.libs/libgfortran.a ${PREFIX}/${CHOST}/lib/
+cp -f --no-dereference ${SRC_DIR}/build/${CHOST}/libgfortran/.libs/libgfortran.*a ${PREFIX}/${CHOST}/lib/
 
 set +x
 # Strip executables, we may want to install to a different prefix
 # and strip in there so that we do not change files that are not
 # part of this package.
 pushd ${PREFIX}
-  _files=$(find . -type f)
+  _files=$(find bin libexec -type f -not -name '*.dll')
   for _file in ${_files}; do
     _type="$( file "${_file}" | cut -d ' ' -f 2- )"
     case "${_type}" in
@@ -64,5 +75,7 @@ popd
 if [[ -f ${PREFIX}/lib/libgomp.spec ]]; then
   mv ${PREFIX}/lib/libgomp.spec ${PREFIX}/${CHOST}/lib/libgomp.spec
 fi
+
+rm -f ${PREFIX}/share/info/dir
 
 source ${RECIPE_DIR}/make_tool_links.sh

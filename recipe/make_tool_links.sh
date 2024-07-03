@@ -2,18 +2,18 @@
 # In the case of cpp, only un-prefixed cpp. Let's copy the un-prefixed tool
 # to prefix-tool and delete the un-prefixed one to get back ct-ng behaviour
 for tool in gcc g++ gfortran cpp gcc-ar gcc-nm gcc-ranlib c++; do
-  if [ -f ${PREFIX}/bin/${tool} ]; then
-    if [ ! -f ${PREFIX}/bin/${gcc_machine}-${gcc_vendor}-linux-gnueabihf-${tool} ]; then
-      cp ${PREFIX}/bin/${tool} ${PREFIX}/bin/${gcc_machine}-${gcc_vendor}-linux-gnueabihf-${tool}
+  if [ -f ${PREFIX}/bin/${tool}${EXEEXT} ]; then
+    if [ ! -f ${PREFIX}/bin/${triplet}-${tool}${EXEEXT} ]; then
+      cp ${PREFIX}/bin/${tool}${EXEEXT} ${PREFIX}/bin/${triplet}-${tool}${EXEEXT}
     fi
-    rm ${PREFIX}/bin/${tool}
+    rm ${PREFIX}/bin/${tool}${EXEEXT}
   fi
 done
 
 # Make a symlink from new gcc vendor to the old one
-for exe in `ls ${PREFIX}/bin/*-${gcc_vendor}-linux-gnueabihf-*`; do
+for exe in `ls ${PREFIX}/bin/${triplet}-*`; do
   nm=`basename ${exe}`
-  new_nm=${nm/"-${gcc_vendor}-"/"-${old_gcc_vendor}-"}
+  new_nm=${nm/"${triplet}-"/"${old_triplet}-"}
   if [ ! -f ${PREFIX}/bin/${new_nm} ]; then
     ln -s ${exe} ${PREFIX}/bin/${new_nm}
   fi

@@ -1,25 +1,20 @@
-export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnueabihf"
-# stash what we need and rm -rf the rest
-tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
-cp -r ${PREFIX}/${CHOST}/sysroot ${tmp_dir}/sysroot
+#!/bin/bash
 
-source ${RECIPE_DIR}/install-libgcc.sh
+source ${RECIPE_DIR}/setup_compiler.sh
 
-# stash what we need and rm -rf the rest
-cp ${PREFIX}/lib/libgomp.so.${libgomp_ver} ${tmp_dir}/libgomp.so.${libgomp_ver}
-cp -r ${PREFIX}/conda-meta ${tmp_dir}/conda-meta
-rm -rf ${PREFIX}/*
+cd build
 
-# copy back and make the right links
-cp -r ${tmp_dir}/conda-meta ${PREFIX}/conda-meta
-mkdir -p ${PREFIX}/${CHOST}
-cp -r ${tmp_dir}/sysroot ${PREFIX}/${CHOST}/sysroot
-mkdir -p ${PREFIX}/lib
-cp ${tmp_dir}/libgomp.so.${libgomp_ver} ${PREFIX}/lib/libgomp.so.${libgomp_ver}
-ln -s ${PREFIX}/lib/libgomp.so.${libgomp_ver} ${PREFIX}/lib/libgomp.so
+make -C ${triplet}/libgomp prefix=${PREFIX} install-toolexeclibLTLIBRARIES
+rm ${PREFIX}/lib/libgomp.a ${PREFIX}/lib/libgomp.la
+
+if [[ "$target_platform" == "linux-"* ]]; then
+  rm ${PREFIX}/lib/libgomp.so.1
+  rm ${PREFIX}/lib/libgomp.so
+  ln -sf ${PREFIX}/lib/libgomp.so.${libgomp_ver} ${PREFIX}/lib/libgomp.so
+else
+  rm ${PREFIX}/lib/libgomp.dll.a
+fi
 
 # Install Runtime Library Exception
 install -Dm644 ${SRC_DIR}/COPYING.RUNTIME \
         ${PREFIX}/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION.gomp_copy
-
-rm -rf ${tmp_dir}

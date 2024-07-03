@@ -1,6 +1,9 @@
+#!/bin/bash
+
+source ${RECIPE_DIR}/setup_compiler.sh
 set -e -x
 
-export CHOST="${gcc_machine}-${gcc_vendor}-linux-gnueabihf"
+export CHOST="${triplet}"
 _libdir=libexec/gcc/${CHOST}/${PKG_VERSION}
 
 # libtool wants to use ranlib that is here, macOS install doesn't grok -t etc
@@ -14,8 +17,8 @@ make -C gcc prefix=${PREFIX} c++.install-common
 # How it used to be:
 # install -m755 -t ${PREFIX}/bin/ gcc/{cc1plus,lto1}
 for file in cc1plus; do
-  if [[ -f gcc/${file} ]]; then
-    install -c gcc/${file} ${PREFIX}/${_libdir}/${file}
+  if [[ -f gcc/${file}${EXEEXT} ]]; then
+    install -c gcc/${file}${EXEEXT} ${PREFIX}/${_libdir}/${file}${EXEEXT}
   fi
 done
 
@@ -34,16 +37,13 @@ make -C libcpp prefix=${PREFIX} install
 popd
 
 mkdir -p ${PREFIX}/lib/gcc/${CHOST}/${PKG_VERSION}
-if [[ "${target_platform}" == "${cross_target_platform}" ]]; then
-  ln -sf ${PREFIX}/lib/libstdc++.so ${PREFIX}/${CHOST}/lib/libstdc++.so
-fi
 
 set +x
 # Strip executables, we may want to install to a different prefix
 # and strip in there so that we do not change files that are not
 # part of this package.
 pushd ${PREFIX}
-  _files=$(find . -type f)
+  _files=$(find bin libexec -type f -not -name '*.dll')
   for _file in ${_files}; do
     _type="$( file "${_file}" | cut -d ' ' -f 2- )"
     case "${_type}" in
