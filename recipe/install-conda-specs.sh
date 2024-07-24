@@ -29,7 +29,7 @@ if [[ "$cross_target_platform" == "$target_platform" ]]; then
     sed -i -e "/\*cc1_options:/,+1 s+%.*+& -idirafter ${PREFIX}/include+" $specdir/conda.specs
 
 else
-    # does it even make sense to do anything here?  Could do something with %:getenv(BUILD_PREFIX  /include)
+    # does it even make sense to do anything here?  Could do something with %:getenv(BUILD_PREFIX  /include) 
     # but in the case that we aren't inside conda-build, it will cause gcc to fatal
     # because it won't be set.  Just explicitly making this fail for now so that the meta.yaml
     # is consitent with when it creates the conda-gcc-specs package
