@@ -381,7 +381,7 @@ outputs:
         - libgcc{{ runtime_suffix }} >={{ gcc_version }}
     test:
       requires:
-        - cmake >=3.11  # [x86_64 or aarch64 or ppc64le]
+        - cmake >=3.11  # [x86_64 or aarch64 or ppc64le or armv7l]
         - {{ cross_target_stdlib }}_{{ cross_target_platform }} {{ cross_target_stdlib_version }}
       commands:
         {% if cross_target_platform.startswith("linux-") %}
@@ -397,7 +397,7 @@ outputs:
         - find $PREFIX/lib -iname ISO_Fortran_binding.h | grep '.'
         - echo {{ gcc_maj_ver }}
         - pushd tests/fortomp
-        - sh test_fort.sh   # [target_platform == cross_target_platform and (x86_64 or aarch64 or ppc64le)]
+        - sh test_fort.sh   # [target_platform == cross_target_platform and (x86_64 or aarch64 or ppc64le or armv7l)]
       files:
         - tests/fortomp/*
     about:

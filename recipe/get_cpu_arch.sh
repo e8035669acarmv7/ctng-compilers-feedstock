@@ -20,7 +20,7 @@ get_cpu_arch() {
 get_triplet() {
   if [[ "$1" == linux-armv7l ]]; then
     echo "$(get_cpu_arch $1)-conda-linux-gnueabihf"
-  if [[ "$1" == linux-* ]]; then
+  elif [[ "$1" == linux-* ]]; then
     echo "$(get_cpu_arch $1)-conda-linux-gnu"
   elif [[ "$1" == osx-64 ]]; then
     echo "x86_64-apple-darwin13.4.0"
